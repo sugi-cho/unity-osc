@@ -110,25 +110,18 @@ namespace Osc
         
         float ReadFloat32 ()
         {
-            Byte[] temp = {
-                readBuffer [readPoint + 3],
-                readBuffer [readPoint + 2],
-                readBuffer [readPoint + 1],
-                readBuffer [readPoint]
-            };
+            var union32 = new MessageEncoder.Union32();
+            union32.Unpack(readBuffer, readPoint);
             readPoint += 4;
-            return BitConverter.ToSingle (temp, 0);
+            return union32.floatdata;
         }
         
         int ReadInt32 ()
         {
-            int temp =
-                (readBuffer [readPoint + 0] << 24) +
-                (readBuffer [readPoint + 1] << 16) +
-                (readBuffer [readPoint + 2] << 8) +
-                (readBuffer [readPoint + 3]);
+            var union32 = new MessageEncoder.Union32();
+            union32.Unpack(readBuffer, readPoint);
             readPoint += 4;
-            return temp;
+            return union32.intdata;
         }
         
         long ReadInt64 ()
