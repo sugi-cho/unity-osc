@@ -40,8 +40,10 @@ namespace OSC.Simple {
 				var clientEndpoint = new IPEndPoint(0, 0);
 				byte[] receivedData = _udp.EndReceive(ar, ref clientEndpoint);
 				_oscParser.FeedData(receivedData);
-				while (_oscParser.MessageCount > 0)
-					_received.Enqueue(new Capsule(_oscParser.PopMessage(), clientEndpoint));
+				while (_oscParser.MessageCount > 0) {
+					lock (_received)
+						_received.Enqueue(new Capsule(_oscParser.PopMessage(), clientEndpoint));
+				}
 				_udp.BeginReceive(_callback, null);
 			} catch (Exception e) {
 				if (OnError != null)
