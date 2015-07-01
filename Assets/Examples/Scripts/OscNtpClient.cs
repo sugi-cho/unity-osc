@@ -20,14 +20,16 @@ public class OscNtpClient : MonoBehaviour {
 		var address = Dns.GetHostAddresses(remoteHost)[0];
 		var serverEndpoint = new IPEndPoint(address, remotePort);
 		_client = new OscClient(serverEndpoint);
-		_client.OnReceive += HandleReceived;;
 		_client.OnError += delegate(System.Exception obj) {
 			Debug.LogError(obj);
 		};
 		
 		StartCoroutine("Request");
 	}
-	
+	void Update() {
+		foreach (var cap in _client)
+			HandleReceived (cap.message);
+	}
 	void HandleReceived(Message m) {
 		if (m.path != OscNtpServer.NTP_RESPONSE)
 			return;

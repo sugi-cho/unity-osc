@@ -19,7 +19,6 @@ public class OscNtpServer : MonoBehaviour {
 		_requests = new Queue<NtpRequest>();
 		var serverEndpoint = new IPEndPoint(IPAddress.Any, listenPort);
 		_server = new OscServer(serverEndpoint);
-		_server.OnReceive += HandleReceived;
 		_server.OnError += delegate(System.Exception obj) {
 			Debug.Log(obj);
 		};	
@@ -45,6 +44,9 @@ public class OscNtpServer : MonoBehaviour {
 		} catch (System.Exception e) {
 			Debug.Log(e);
 		}
+
+		foreach (var cap in _server)
+			HandleReceived (cap.message, cap.ip);
 	}
 		
 	void HandleReceived(Message m, IPEndPoint remoteEndpoint) {
