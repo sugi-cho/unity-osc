@@ -3,8 +3,12 @@ using System.Net.Sockets;
 
 namespace OSC.Simple {
 	public class OscServer : OscPort {
+		public int listenPort;
 	
-		public OscServer(IPEndPoint serverEndpoint) : base(serverEndpoint) {}
+		void Start() {
+			var serverEndpoint = new IPEndPoint (IPAddress.Any, listenPort);
+			Init (serverEndpoint);
+		}
 
 		public override UdpClient GenerateUdpClient(IPEndPoint serverEndPoint) {
 			return new UdpClient(_serverEndpoint);

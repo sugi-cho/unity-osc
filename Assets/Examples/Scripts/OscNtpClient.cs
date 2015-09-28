@@ -6,30 +6,23 @@ using OSC.Simple;
 using Osc;
 
 public class OscNtpClient : MonoBehaviour {
-	public string remoteHost = "localhost";
-	public int remotePort = 10000;
 	public float interval = 1f;
 	public int nSamplesPOT = 64;
 	public RingBuffer<NtpStat> stats;
 	
-	private OscClient _client;
+	public OscClient client;
 
 	// Use this for initialization
 	void Start () {
 		stats = new RingBuffer<NtpStat>(nSamplesPOT);
-		var address = Dns.GetHostAddresses(remoteHost)[0];
-		var serverEndpoint = new IPEndPoint(address, remotePort);
-		_client = new OscClient(serverEndpoint);
-		_client.OnError += delegate(System.Exception obj) {
-			Debug.LogError(obj);
-		};
+		client.OnError.AddListener (delegate(System.Exception obj) {
+			Debug.LogError (obj);
+		});
+		client.OnReceive.AddListener((cap) => HandleReceived (cap.message));
 		
 		StartCoroutine("Request");
 	}
-	void Update() {
-		foreach (var cap in _client)
-			HandleReceived (cap.message);
-	}
+
 	void HandleReceived(Message m) {
 		if (m.path != OscNtpServer.NTP_RESPONSE)
 			return;
@@ -52,15 +45,8 @@ public class OscNtpClient : MonoBehaviour {
 			var t0 = System.BitConverter.GetBytes(IPAddress.HostToNetworkOrder(now.ToBinary()));
 			oscEnc.Add(t0);
 			var bytedata = oscEnc.Encode();
-			_client.Send(bytedata);
+			client.Send(bytedata);
 			Debug.LogFormat("Client Send {0}", now);
-		}
-	}
-	
-	void OnDestroy() {
-		if (_client != null) {
-			_client.Dispose();
-			_client = null;
 		}
 	}
 	

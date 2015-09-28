@@ -7,21 +7,18 @@ using Osc;
 
 public class OscNtpServer : MonoBehaviour {
 	public const string NTP_REQUEST = "/ntp/request";
-	public const string NTP_RESPONSE = "/ntp/response";	
+	public const string NTP_RESPONSE = "/ntp/response";
 	
-	public int listenPort;
-	
-	private OscServer _server;
+	public OscServer server;
 	private Queue<NtpRequest> _requests;
 
 	// Use this for initialization
 	void Start () {
 		_requests = new Queue<NtpRequest>();
-		var serverEndpoint = new IPEndPoint(IPAddress.Any, listenPort);
-		_server = new OscServer(serverEndpoint);
-		_server.OnError += delegate(System.Exception obj) {
-			Debug.Log(obj);
-		};	
+		server.OnError.AddListener (delegate(System.Exception obj) {
+			Debug.Log (obj);
+		});
+		server.OnReceive.AddListener ((cap) => HandleReceived (cap.message, cap.ip));
 	}
 	
 	// Update is called once per frame
@@ -37,16 +34,13 @@ public class OscNtpServer : MonoBehaviour {
 					var t2 = System.BitConverter.GetBytes(IPAddress.HostToNetworkOrder(now.ToBinary()));
 					oscEnc.Add(t2);
 					var bytedata = oscEnc.Encode();
-					_server.Send(bytedata, req.remote);
+					server.Send(bytedata, req.remote);
 					Debug.LogFormat("Server Send {0}", now);
 				}
 			}
 		} catch (System.Exception e) {
 			Debug.Log(e);
 		}
-
-		foreach (var cap in _server)
-			HandleReceived (cap.message, cap.ip);
 	}
 		
 	void HandleReceived(Message m, IPEndPoint remoteEndpoint) {
@@ -59,13 +53,6 @@ public class OscNtpServer : MonoBehaviour {
 				t0 = (byte[])m.data[0],
 				t1 = System.BitConverter.GetBytes(IPAddress.HostToNetworkOrder(HighResTime.UtcNow.ToBinary())),
 			});
-		}
-	}
-	
-	void OnDestroy() {
-		if (_server != null) {
-			_server.Dispose();
-			_server = null;
 		}
 	}
 	
