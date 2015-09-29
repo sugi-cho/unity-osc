@@ -2,6 +2,8 @@ unity-osc
 =========
 OSC Client & Server MonoBehaviours for Unity
 
+[Unity Package](Osc.unitypackage)
+
 # Usage
 ## Set Up a Server
  - Add OscServer (MonoBehaviour) Component
