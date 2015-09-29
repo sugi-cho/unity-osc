@@ -1,49 +1,17 @@
 unity-osc
 =========
-OSC Encoder/Decoder for Unity
+OSC Client & Server MonoBehaviours for Unity
 
 # Usage
 ## Set Up a Server
-```C#
-private OscServer _server;
-
-void Start () {
-	var serverEndpoint = new IPEndPoint(IPAddress.Any, listenPort);
-	_server = new OscServer(serverEndpoint);
-	_server.OnError += delegate(System.Exception obj) {
-		Debug.Log(obj);
-	};	
-}
-
-void OnDestroy() {
-	if (_server != null)
-		_server.Dispose();
-}
-```
+ - Add OscServer (MonoBehaviour) Component
+ - Set Listening Port Number
+ - Listen OnReceive Event
 
 ## Set Up a Client
-```C#
-private OscClient _client;
-
-void Start () {
-	var address = Dns.GetHostAddresses(remoteHost)[0];
-	var serverEndpoint = new IPEndPoint(address, remotePort);
-	_client = new OscClient(serverEndpoint);
-	_client.OnError += delegate(System.Exception obj) {
-		Debug.LogError(obj);
-	};
-}
-void OnDestroy() {
-	if (_client != null)
-		_client.Dispose();
-}
-```
-
-## Read Messages
-```C#
-foreach (var cap in _server)
-	ProcessMessage(cap.message);
-```
+ - Add OscClient (MonoBehaviour) Component
+ - Set Server Name & Port Number
+ - Listen OnReceive Event
 
 ## Send a Message
 ```C#
