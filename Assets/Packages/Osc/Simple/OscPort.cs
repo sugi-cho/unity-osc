@@ -15,16 +15,38 @@ namespace OSC.Simple {
 		protected IPEndPoint _serverEndpoint;
 		protected Parser _oscParser;
 		protected Queue<Capsule> _received;
+		protected Queue<System.Exception> _errors;
 
 		protected UdpClient _udp;
 		protected bool _disposed = false;
 
+		void Awake() {
+			_callback = new System.AsyncCallback (HandleReceive);
+			_oscParser = new Parser ();
+			_received = new Queue<Capsule> ();
+			_errors = new Queue<Exception> ();
+		}
+		void Update() {
+			lock (_received)
+				while (_received.Count > 0)
+					OnReceive.Invoke (_received.Dequeue ());
+			lock (_errors)
+				while (_errors.Count > 0)
+					OnError.Invoke (_errors.Dequeue ());
+			CustomUpdate ();
+		}
+		void OnDisable() {
+			if (_udp != null) {
+				_udp.Close();
+				_udp = null;
+			}
+		}
+
+		protected virtual void CustomUpdate() {}
+
 		protected virtual void Init(IPEndPoint serverEndpoint) {
 			_serverEndpoint = serverEndpoint;
 			_udp = GenerateUdpClient(_serverEndpoint);
-			_callback = new System.AsyncCallback(HandleReceive);
-			_oscParser = new Parser();
-			_received = new Queue<Capsule> ();
 			
 			_udp.BeginReceive(_callback, null);			
 		}
@@ -32,7 +54,7 @@ namespace OSC.Simple {
 		public abstract UdpClient GenerateUdpClient (IPEndPoint serverEndPoint);
 
 		public void RaiseError(System.Exception e) {
-			OnError.Invoke(e);
+			_errors.Enqueue (e);
 		}
 			
 		private void HandleReceive(System.IAsyncResult ar) {
@@ -47,26 +69,9 @@ namespace OSC.Simple {
 						_received.Enqueue(new Capsule(_oscParser.PopMessage(), clientEndpoint));
 				}
 			} catch (Exception e) {
-				OnError.Invoke(e);
+				RaiseError (e);
 			}
 			_udp.BeginReceive(_callback, null);
-		}
-
-		void Update() {
-			while (true) {
-				lock (_received) {
-					if (_received.Count == 0)
-						break;
-					OnReceive.Invoke(_received.Dequeue());
-				}
-			}
-		}
-		
-		void OnDestroy() {
-			if (_udp != null) {
-				_udp.Close();
-				_udp = null;
-			}
 		}
 
 		public struct Capsule {

@@ -5,7 +5,7 @@ namespace OSC.Simple {
 	public class OscServer : OscPort {
 		public int listenPort;
 	
-		void Start() {
+		void OnEnable() {
 			try {
 				var serverEndpoint = new IPEndPoint (IPAddress.Any, listenPort);
 				Init (serverEndpoint);

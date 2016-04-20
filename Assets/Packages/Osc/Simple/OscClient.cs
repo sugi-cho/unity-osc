@@ -6,7 +6,7 @@ namespace OSC.Simple {
 		public string remoteHost = "localhost";
 		public int remotePort = 10000;
 
-		void Start() {
+		void OnEnable() {
 			try {
 				var addresses = Dns.GetHostAddresses (remoteHost);
 				IPAddress address = IPAddress.None;
