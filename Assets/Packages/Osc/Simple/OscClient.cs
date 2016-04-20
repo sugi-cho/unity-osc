@@ -7,13 +7,24 @@ namespace OSC.Simple {
 		public int remotePort = 10000;
 
 		void Start() {
-			var address = Dns.GetHostAddresses (remoteHost) [0];
-			var serverEndpoint = new IPEndPoint (address, remotePort);
-			Init (serverEndpoint);
+			try {
+				var addresses = Dns.GetHostAddresses (remoteHost);
+				IPAddress address = IPAddress.None;
+				for (var i = 0; i < addresses.Length; i++) {
+					if (addresses[i].AddressFamily == AddressFamily.InterNetwork) {
+						address = addresses[i];
+						break;
+					}
+				}
+				var serverEndpoint = new IPEndPoint(address, remotePort);
+				Init (serverEndpoint);
+			} catch (System.Exception e) {
+				RaiseError (e);
+			}
 		}
 
 		public override UdpClient GenerateUdpClient (IPEndPoint serverEndPoint) {
-			return new UdpClient ();
+			return new UdpClient (AddressFamily.InterNetwork);
 		}
 
 		public void Send(byte[] oscPacket) {

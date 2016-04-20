@@ -6,12 +6,16 @@ namespace OSC.Simple {
 		public int listenPort;
 	
 		void Start() {
-			var serverEndpoint = new IPEndPoint (IPAddress.Any, listenPort);
-			Init (serverEndpoint);
+			try {
+				var serverEndpoint = new IPEndPoint (IPAddress.Any, listenPort);
+				Init (serverEndpoint);
+			} catch (System.Exception e) {
+				RaiseError (e);
+			}
 		}
 
 		public override UdpClient GenerateUdpClient(IPEndPoint serverEndPoint) {
-			return new UdpClient(_serverEndpoint);
+			return new UdpClient (_serverEndpoint);
 		}
 
 		public void Send(byte[] oscPacket, IPEndPoint clientEndpoint) {

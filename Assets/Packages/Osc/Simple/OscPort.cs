@@ -46,10 +46,10 @@ namespace OSC.Simple {
 					lock (_received)
 						_received.Enqueue(new Capsule(_oscParser.PopMessage(), clientEndpoint));
 				}
-				_udp.BeginReceive(_callback, null);
 			} catch (Exception e) {
 				OnError.Invoke(e);
 			}
+			_udp.BeginReceive(_callback, null);
 		}
 
 		void Update() {

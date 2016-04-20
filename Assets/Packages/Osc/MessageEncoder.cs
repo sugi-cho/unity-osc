@@ -4,8 +4,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace Osc 
-{
+namespace Osc {
 	public class MessageEncoder {
 		private string _address;
 		private LinkedList<IParam> _params;
