@@ -1,51 +1,80 @@
 ﻿using UnityEngine;
 using System.Collections;
-using OSC.Simple;
+using OSC;
+using DataUI;
 
 namespace Osc {
 	
 	public class OscTestUI : MonoBehaviour {
 		public const string OSC_PATH = "/data";
 
-		public OscServer server;
-		public OscClient client;
+		public OscPort server;
+		public OscPort client;
 
-		Rect _window = new Rect(10, 10, 200, 200);
-		int _counter = 0;
+		public Data serverData;
+		public Data clientData;
 
-		void Update() {
-			client.enabled = !server.enabled;
+		FieldEditor _serverField;
+		FieldEditor _clientField;
+		Rect _window = new Rect(10, 10, 300, 200);
+
+		void Start() {
+			_serverField = new FieldEditor (serverData);
+			_clientField = new FieldEditor (clientData);
 		}
 		void OnGUI() {
 			_window = GUILayout.Window (0, _window, Window, "UI");
 		}
 
-		public void OnReceive(OscServer.Capsule c) {
-			if (c.message.path == OSC_PATH)
-				_counter++;
+		public void OnServerReceive(OscPort.Capsule c) {
+			Debug.LogFormat ("On Server Receive");
+			if (c.message.path == OSC_PATH) {
+				serverData = JsonUtility.FromJson<Data> ((string)c.message.data [0]);
+				_serverField.Load (serverData);
+			}
+		}
+		public void OnClientReceive(OscPort.Capsule c) {
+			Debug.LogFormat ("On Client Receive");
+			if (c.message.path == OSC_PATH) {
+				clientData = JsonUtility.FromJson<Data> ((string)c.message.data [0]);
+				_clientField.Load (clientData);
+			}
 		}
 		public void OnError(System.Exception e) {
 			Debug.LogFormat ("Exception {0}", e);
 		}
 
 		void Window(int id) {
+			GUILayout.BeginHorizontal ();
+
 			GUILayout.BeginVertical ();
-
-			if (GUILayout.Button (server.enabled ? "Client" : "Server")) {
-				server.enabled = !server.enabled;
-				client.enabled = !server.enabled;
+			GUILayout.Label ("Server");
+			_serverField.OnGUI ();
+			if (GUILayout.Button ("Send")) {
+				var osc = new MessageEncoder (OSC_PATH);
+				osc.Add (JsonUtility.ToJson (serverData));
+				server.Send (osc);
 			}
-
-			GUI.enabled = client.enabled;
-			if (GUILayout.Button ("Count")) {
-				var osc = new Osc.MessageEncoder (OSC_PATH);
-				client.Send (osc.Encode ());
-			}
-			GUI.enabled = true;
-			GUILayout.Label (string.Format ("Counter {0}", _counter));
-
 			GUILayout.EndVertical ();
+
+			GUILayout.BeginVertical ();
+			GUILayout.Label ("Client");
+			_clientField.OnGUI ();
+			if (GUILayout.Button ("Send")) {
+				var osc = new MessageEncoder (OSC_PATH);
+				osc.Add (JsonUtility.ToJson (clientData));
+				client.Send (osc);
+			}
+			GUILayout.EndVertical ();
+
+			GUILayout.EndHorizontal ();
 			GUI.DragWindow ();
+		}
+
+		[System.Serializable]
+		public class Data {
+			public string text;
+			public int number;
 		}
 	}
 }
