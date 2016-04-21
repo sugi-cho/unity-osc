@@ -8,15 +8,13 @@ using UnityEngine;
 
 namespace OSC {
 	public class OscPort : MonoBehaviour {
-		public enum SendModeEnum { Normal = 0, Broadcast }
-
 		public CapsuleEvent OnReceive;
 		public ExceptionEvent OnError;
 
-		public SendModeEnum sendMode;
 		public int localPort = 0;
-		public string remoteHost = "localhost";
-		public int remotePort = 10000;
+		public string defaultRemoteHost = "localhost";
+		public int defaultRemotePort = 10000;
+		public int limitReceiveBuffer = 10;
 		
 		AsyncCallback _callback;
 		Parser _oscParser;
@@ -24,7 +22,7 @@ namespace OSC {
 		Queue<System.Exception> _errors;
 
 		UdpClient _udp;
-		IPEndPoint _remoteEndPoint;
+		IPEndPoint _defaultRemote;
 
 		void Awake() {
 			_callback = new System.AsyncCallback (HandleReceive);
@@ -34,14 +32,7 @@ namespace OSC {
 		}
 		void OnEnable() {
 			try {
-				switch (sendMode) {
-				default:
-					_remoteEndPoint = new IPEndPoint (FindFromHostName (remoteHost), remotePort);
-					break;
-				case SendModeEnum.Broadcast:
-					_remoteEndPoint = new IPEndPoint (IPAddress.Broadcast, remotePort);
-					break;
-				}
+				_defaultRemote = new IPEndPoint (FindFromHostName (defaultRemoteHost), defaultRemotePort);
 
 				_udp = new UdpClient (localPort, AddressFamily.InterNetwork);
 				_udp.BeginReceive(_callback, null);
@@ -65,17 +56,23 @@ namespace OSC {
 		}
 
 		public void Send(MessageEncoder oscMessage) {
-			Send (oscMessage.Encode ());
+			Send (oscMessage, _defaultRemote);
+		}
+		public void Send(MessageEncoder oscMessage, IPEndPoint remote) {
+			Send (oscMessage.Encode (), remote);
 		}
 		public void Send(byte[] oscData) {
+			Send (oscData, _defaultRemote);
+		}
+		public void Send(byte[] oscData, IPEndPoint remote) {
 			try {
-				_udp.Send (oscData, oscData.Length, _remoteEndPoint);
+				_udp.Send (oscData, oscData.Length, remote);
 			} catch (System.Exception e) {
 				RaiseError (e);
 			}
 		}
 		public IPAddress FindFromHostName(string hostname) {
-			var addresses = Dns.GetHostAddresses (remoteHost);
+			var addresses = Dns.GetHostAddresses (defaultRemoteHost);
 			IPAddress address = IPAddress.None;
 			for (var i = 0; i < addresses.Length; i++) {
 				if (addresses[i].AddressFamily == AddressFamily.InterNetwork) {
@@ -97,8 +94,11 @@ namespace OSC {
 				byte[] receivedData = _udp.EndReceive(ar, ref clientEndpoint);
 				_oscParser.FeedData(receivedData);
 				while (_oscParser.MessageCount > 0) {
-					lock (_received)
-						_received.Enqueue(new Capsule(_oscParser.PopMessage(), clientEndpoint));
+					lock (_received) {
+						var msg = _oscParser.PopMessage();
+						if (limitReceiveBuffer > 0 && _received.Count < limitReceiveBuffer)
+							_received.Enqueue(new Capsule(msg, clientEndpoint));
+					}
 				}
 			} catch (Exception e) {
 				RaiseError (e);
