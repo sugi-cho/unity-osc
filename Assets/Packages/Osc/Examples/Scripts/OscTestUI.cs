@@ -23,7 +23,7 @@ namespace Osc {
 			_clientField = new FieldEditor (clientData);
 		}
 		void OnGUI() {
-			_window = GUILayout.Window (0, _window, Window, "UI");
+			_window = GUILayout.Window (GetInstanceID(), _window, Window, "UI");
 		}
 
 		public void OnServerReceive(OscPort.Capsule c) {
