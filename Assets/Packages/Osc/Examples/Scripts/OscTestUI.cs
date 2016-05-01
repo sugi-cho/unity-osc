@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 using System.Collections;
-using OSC;
 using DataUI;
 
 namespace Osc {

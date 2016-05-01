@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using UnityEngine.Events;
 using UnityEngine;
 
-namespace OSC {
+namespace Osc {
 	public class OscPort : MonoBehaviour {
 		public CapsuleEvent OnReceive;
 		public ExceptionEvent OnError;
@@ -16,16 +16,16 @@ namespace OSC {
 		public int defaultRemotePort = 10000;
 		public int limitReceiveBuffer = 10;
 		
-		AsyncCallback _callback;
 		Parser _oscParser;
 		Queue<Capsule> _received;
 		Queue<System.Exception> _errors;
 
-		UdpClient _udp;
+		Socket _socket;
 		IPEndPoint _defaultRemote;
 
+
+
 		void Awake() {
-			_callback = new System.AsyncCallback (HandleReceive);
 			_oscParser = new Parser ();
 			_received = new Queue<Capsule> ();
 			_errors = new Queue<Exception> ();
@@ -34,8 +34,8 @@ namespace OSC {
 			try {
 				_defaultRemote = new IPEndPoint (FindFromHostName (defaultRemoteHost), defaultRemotePort);
 
-				_udp = new UdpClient (localPort, AddressFamily.InterNetwork);
-				_udp.BeginReceive(_callback, null);
+				_socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+				_socket.Bind(new EndPoint(IPAddress.Any, localPort));
 			} catch (System.Exception e) {
 				RaiseError (e);
 			}
