@@ -29,6 +29,7 @@ namespace Osc
         
         #region Temporary read buffer
         Byte[] readBuffer;
+		int readBufferLength;
         int readPoint;
         #endregion
         
@@ -47,9 +48,10 @@ namespace Osc
             return messageBuffer.Dequeue ();
         }
         
-        public void FeedData (Byte[] data)
+		public void FeedData (Byte[] data, int length)
         {
             readBuffer = data;
+			readBufferLength = length;
             readPoint = 0;
             
             ReadMessage ();
@@ -67,7 +69,7 @@ namespace Osc
                 ReadInt64 ();
                 
                 while (true) {
-                    if (readPoint >= readBuffer.Length) {
+                    if (readPoint >= readBufferLength) {
                         return;
                     }
                     var peek = readBuffer [readPoint];

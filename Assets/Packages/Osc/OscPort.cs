@@ -5,9 +5,11 @@ using Osc;
 using System.Collections.Generic;
 using UnityEngine.Events;
 using UnityEngine;
+using System.Threading;
 
 namespace Osc {
 	public class OscPort : MonoBehaviour {
+		public const int BUFFER_SIZE = 1 << 16;
 		public CapsuleEvent OnReceive;
 		public ExceptionEvent OnError;
 
@@ -20,10 +22,11 @@ namespace Osc {
 		Queue<Capsule> _received;
 		Queue<System.Exception> _errors;
 
-		Socket _socket;
+		Socket _udp;
+		byte[] _receiveBuffer;
 		IPEndPoint _defaultRemote;
 
-
+		Thread _reader;
 
 		void Awake() {
 			_oscParser = new Parser ();
@@ -34,10 +37,16 @@ namespace Osc {
 			try {
 				_defaultRemote = new IPEndPoint (FindFromHostName (defaultRemoteHost), defaultRemotePort);
 
-				_socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-				_socket.Bind(new EndPoint(IPAddress.Any, localPort));
+				_udp = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+				_udp.Bind(new IPEndPoint(IPAddress.Any, localPort));
+
+				_receiveBuffer = new byte[BUFFER_SIZE];
+
+				_reader = new Thread(Reader);
+				_reader.Start();
 			} catch (System.Exception e) {
 				RaiseError (e);
+				enabled = false;
 			}
 		}
 		void Update() {
@@ -50,8 +59,12 @@ namespace Osc {
 		}
 		void OnDisable() {
 			if (_udp != null) {
-				_udp.Close();
+				_udp.Close ();
 				_udp = null;
+			}
+			if (_reader != null) {
+				_reader.Abort ();
+				_reader = null;
 			}
 		}
 
@@ -66,7 +79,7 @@ namespace Osc {
 		}
 		public void Send(byte[] oscData, IPEndPoint remote) {
 			try {
-				_udp.Send (oscData, oscData.Length, remote);
+				_udp.SendTo(oscData, remote);
 			} catch (System.Exception e) {
 				RaiseError (e);
 			}
@@ -83,27 +96,30 @@ namespace Osc {
 			return address;
 		}
 			
+		void Reader() {
+			while (_udp != null) {
+				try {
+					var clientEndpoint = new IPEndPoint (IPAddress.Any, 0);
+					var fromendpoint = (EndPoint)clientEndpoint;
+					var length = _udp.ReceiveFrom(_receiveBuffer, ref fromendpoint);
+					if (length == 0 || (clientEndpoint = fromendpoint as IPEndPoint) == null)
+						continue;
+					
+					_oscParser.FeedData (_receiveBuffer, length);
+					while (_oscParser.MessageCount > 0) {
+						lock (_received) {
+							var msg = _oscParser.PopMessage ();
+							if (limitReceiveBuffer > 0 && _received.Count < limitReceiveBuffer)
+								_received.Enqueue (new Capsule (msg, clientEndpoint));
+						}
+					}
+				} catch (Exception e) {
+					RaiseError (e);
+				}
+			}
+		}
 		void RaiseError(System.Exception e) {
 			_errors.Enqueue (e);
-		}
-		void HandleReceive(System.IAsyncResult ar) {
-			try {
-				if (_udp == null)
-					return;
-				var clientEndpoint = new IPEndPoint(0, 0);
-				byte[] receivedData = _udp.EndReceive(ar, ref clientEndpoint);
-				_oscParser.FeedData(receivedData);
-				while (_oscParser.MessageCount > 0) {
-					lock (_received) {
-						var msg = _oscParser.PopMessage();
-						if (limitReceiveBuffer > 0 && _received.Count < limitReceiveBuffer)
-							_received.Enqueue(new Capsule(msg, clientEndpoint));
-					}
-				}
-			} catch (Exception e) {
-				RaiseError (e);
-			}
-			_udp.BeginReceive(_callback, null);
 		}
 
 		public struct Capsule {

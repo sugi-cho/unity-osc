@@ -16,10 +16,9 @@ namespace Osc {
 		void Start() {
 			_sendCount = 0;
 			_receiveCount = 0;
+			StartCoroutine (Logger());
 		}
 		void Update () {
-			Debug.LogFormat ("Count {0}/{1}", _receiveCount, _sendCount);
-
 			if (sending) {
 				for (var i = 0; i < numSendsPerFrame; i++) {
 					_sendCount++;
@@ -29,12 +28,19 @@ namespace Osc {
 				}
 			}
 		}
-
+		
 		public void OnReceive(OscPort.Capsule c) {
 			_receiveCount++;
 		}
 		public void OnError(System.Exception e) {
 			Debug.LogFormat ("Error {0}", e);
+		}
+
+		IEnumerator Logger() {
+			while (true) {
+				yield return new WaitForSeconds(1f);
+				Debug.LogFormat ("Count {0}/{1}", _receiveCount, _sendCount);
+			}
 		}
 	}
 }
