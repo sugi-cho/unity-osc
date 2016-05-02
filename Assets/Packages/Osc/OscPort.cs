@@ -66,6 +66,10 @@ namespace Osc {
 		protected void RaiseError(System.Exception e) {
 			_errors.Enqueue (e);
 		}
+		protected void Receive(OscPort.Capsule c) {
+			if (limitReceiveBuffer <= 0 || _received.Count < limitReceiveBuffer)
+				_received.Enqueue (c);
+		}
 
 		public struct Capsule {
 			public Message message;

@@ -5,42 +5,50 @@ namespace Osc {
 
 	public class OscPerformanceTest : MonoBehaviour {
 		public const string OSC_PATH = "/path";
+		public Dataset[] datasets;
+		public int packetsPerSec = 1000;
 
-		public bool sending = true;
-		public OscPort sender;
-		public int numSendsPerFrame = 100;
+		public int index = 0;
 
-		int _sendCount;
-		int _receiveCount;
+		int _nsent = 0;
+		int _nreceived = 0;
 
 		void Start() {
-			_sendCount = 0;
-			_receiveCount = 0;
-			StartCoroutine (Logger());
+			StartCoroutine (Stat ());
 		}
 		void Update () {
-			if (sending) {
-				for (var i = 0; i < numSendsPerFrame; i++) {
-					_sendCount++;
-					var oscdata = new MessageEncoder (OSC_PATH);
-					oscdata.Add (_sendCount);
-					sender.Send (oscdata);
-				}
+			index = Mathf.Clamp (index, 0, datasets.Length);
+			var sender = datasets [index].sender;
+			var packetsInFrame = Mathf.RoundToInt(Time.deltaTime * packetsPerSec);
+			for (var i = 0; i < packetsInFrame; i++) {
+				_nsent++;
+				var oscdata = new MessageEncoder (OSC_PATH);
+				oscdata.Add (_nsent);
+				sender.Send (oscdata);
 			}
 		}
 		
 		public void OnReceive(OscPort.Capsule c) {
-			_receiveCount++;
+			_nreceived++;
 		}
 		public void OnError(System.Exception e) {
-			Debug.LogFormat ("Error {0}", e);
+			Debug.LogFormat ("Exception {0}", e);
 		}
-
-		IEnumerator Logger() {
+		IEnumerator Stat() {
 			while (true) {
-				yield return new WaitForSeconds(1f);
-				Debug.LogFormat ("Count {0}/{1}", _receiveCount, _sendCount);
+				yield return new WaitForSeconds (1f);
+
+				Debug.LogFormat ("Stat {0} throughput={1}% {2}/{3}", 
+					datasets[index].name, 100f * _nreceived / _nsent, _nreceived, _nsent);
+				_nsent = _nreceived = 0;
 			}
 		}
+
+		[System.Serializable]
+		public class Dataset {
+			public string name;
+			public OscPort sender;
+		}
+
 	}
 }
