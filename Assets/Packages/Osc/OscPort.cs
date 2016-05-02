@@ -8,7 +8,7 @@ using UnityEngine;
 using System.Threading;
 
 namespace Osc {
-	public class OscPort : MonoBehaviour {
+	public abstract class OscPort : MonoBehaviour {
 		public const int BUFFER_SIZE = 1 << 16;
 		public CapsuleEvent OnReceive;
 		public ExceptionEvent OnError;
@@ -18,54 +18,27 @@ namespace Osc {
 		public int defaultRemotePort = 10000;
 		public int limitReceiveBuffer = 10;
 		
-		Parser _oscParser;
-		Queue<Capsule> _received;
-		Queue<System.Exception> _errors;
+		protected Parser _oscParser;
+		protected Queue<Capsule> _received;
+		protected Queue<System.Exception> _errors;
+		protected IPEndPoint _defaultRemote;
 
-		Socket _udp;
-		byte[] _receiveBuffer;
-		IPEndPoint _defaultRemote;
-
-		Thread _reader;
-
-		void Awake() {
+		protected virtual void OnEnable() {
 			_oscParser = new Parser ();
 			_received = new Queue<Capsule> ();
 			_errors = new Queue<Exception> ();
+			_defaultRemote = new IPEndPoint (FindFromHostName (defaultRemoteHost), defaultRemotePort);
 		}
-		void OnEnable() {
-			try {
-				_defaultRemote = new IPEndPoint (FindFromHostName (defaultRemoteHost), defaultRemotePort);
-
-				_udp = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-				_udp.Bind(new IPEndPoint(IPAddress.Any, localPort));
-
-				_receiveBuffer = new byte[BUFFER_SIZE];
-
-				_reader = new Thread(Reader);
-				_reader.Start();
-			} catch (System.Exception e) {
-				RaiseError (e);
-				enabled = false;
-			}
+		protected virtual void OnDisable() {
 		}
-		void Update() {
+
+		protected virtual void Update() {
 			lock (_received)
 				while (_received.Count > 0)
 					OnReceive.Invoke (_received.Dequeue ());
 			lock (_errors)
 				while (_errors.Count > 0)
 					OnError.Invoke (_errors.Dequeue ());
-		}
-		void OnDisable() {
-			if (_udp != null) {
-				_udp.Close ();
-				_udp = null;
-			}
-			if (_reader != null) {
-				_reader.Abort ();
-				_reader = null;
-			}
 		}
 
 		public void Send(MessageEncoder oscMessage) {
@@ -77,13 +50,8 @@ namespace Osc {
 		public void Send(byte[] oscData) {
 			Send (oscData, _defaultRemote);
 		}
-		public void Send(byte[] oscData, IPEndPoint remote) {
-			try {
-				_udp.SendTo(oscData, remote);
-			} catch (System.Exception e) {
-				RaiseError (e);
-			}
-		}
+		public abstract void Send (byte[] oscData, IPEndPoint remote);
+
 		public IPAddress FindFromHostName(string hostname) {
 			var addresses = Dns.GetHostAddresses (defaultRemoteHost);
 			IPAddress address = IPAddress.None;
@@ -95,30 +63,7 @@ namespace Osc {
 			}
 			return address;
 		}
-			
-		void Reader() {
-			while (_udp != null) {
-				try {
-					var clientEndpoint = new IPEndPoint (IPAddress.Any, 0);
-					var fromendpoint = (EndPoint)clientEndpoint;
-					var length = _udp.ReceiveFrom(_receiveBuffer, ref fromendpoint);
-					if (length == 0 || (clientEndpoint = fromendpoint as IPEndPoint) == null)
-						continue;
-					
-					_oscParser.FeedData (_receiveBuffer, length);
-					while (_oscParser.MessageCount > 0) {
-						lock (_received) {
-							var msg = _oscParser.PopMessage ();
-							if (limitReceiveBuffer > 0 && _received.Count < limitReceiveBuffer)
-								_received.Enqueue (new Capsule (msg, clientEndpoint));
-						}
-					}
-				} catch (Exception e) {
-					RaiseError (e);
-				}
-			}
-		}
-		void RaiseError(System.Exception e) {
+		protected void RaiseError(System.Exception e) {
 			_errors.Enqueue (e);
 		}
 
