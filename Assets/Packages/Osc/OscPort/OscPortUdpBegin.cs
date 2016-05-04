@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using UnityEngine.Events;
 using UnityEngine;
 
-namespace OSC {
+namespace Osc {
 	public class OscPortUdpBegin : OscPort {
 		UdpClient _udp;
 		AsyncCallback _callback;

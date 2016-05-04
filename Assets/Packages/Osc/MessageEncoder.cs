@@ -212,6 +212,19 @@ namespace Osc {
 				output [offset] = Byte6; offset += inc;
 				output [offset] = Byte7; offset += inc;
 			}
+
+			public void Unpack (byte[] input, int offset) {
+				var inc = BitConverter.IsLittleEndian ? -1 : 1;
+				offset += BitConverter.IsLittleEndian ? 7 : 0;
+				Byte0 = input [offset]; offset += inc;
+				Byte1 = input [offset]; offset += inc;
+				Byte2 = input [offset]; offset += inc;
+				Byte3 = input [offset]; offset += inc;
+				Byte4 = input [offset]; offset += inc;
+				Byte5 = input [offset]; offset += inc;
+				Byte6 = input [offset]; offset += inc;
+				Byte7 = input [offset]; offset += inc;
+			}
 		}
 	}
 }
