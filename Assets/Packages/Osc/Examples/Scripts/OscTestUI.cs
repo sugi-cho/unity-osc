@@ -29,14 +29,14 @@ namespace Osc {
 			Debug.LogFormat ("On Server Receive");
 			if (c.message.path == OSC_PATH) {
 				serverData = JsonUtility.FromJson<Data> ((string)c.message.data [0]);
-				_serverField.Load (serverData);
+				_serverField.Load ();
 			}
 		}
 		public void OnClientReceive(OscPort.Capsule c) {
 			Debug.LogFormat ("On Client Receive");
 			if (c.message.path == OSC_PATH) {
 				clientData = JsonUtility.FromJson<Data> ((string)c.message.data [0]);
-				_clientField.Load (clientData);
+				_clientField.Load ();
 			}
 		}
 		public void OnError(System.Exception e) {

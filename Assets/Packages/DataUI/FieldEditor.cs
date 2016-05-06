@@ -5,17 +5,16 @@ using System.Collections.Generic;
 
 namespace DataUI {
 	public class FieldEditor {
-		public enum FieldKindEnum { Int, Float, Bool, Vector2, Vector3, Vector4, Matrix, Color, Enum, String, Unknown }
+		public enum FieldKindEnum { Int, Float, Bool, Vector2, Vector3, Vector4, Matrix, Color, Enum, Unknown }
 		public const BindingFlags BINDING = BindingFlags.Public | BindingFlags.Instance;
 
+		public readonly System.Object data;
 		public readonly List<BaseGUIField> GuiFields = new List<BaseGUIField>();
-		public System.Object Data { get { return _data; } }
 
-		System.Object _data;
 		FieldInfo[] _fieldInfos;
 
 		public FieldEditor(System.Object data) {
-			this._data = data;
+			this.data = data;
 			_fieldInfos = data.GetType().GetFields(BINDING);
 			for (var i = 0; i < _fieldInfos.Length; i++)
 				GuiFields.Add(GenerateGUI(_fieldInfos[i]));
@@ -26,8 +25,7 @@ namespace DataUI {
 			for (var i = 0; i < limit; i++)
 				GuiFields[i].OnGUI();
 		}
-		public void Load(System.Object data) {
-			_data = data;
+		public void Load() {
 			var limit = GuiFields.Count;
 			for (var i = 0; i < limit; i++)
 				GuiFields[i].Load();
@@ -37,27 +35,25 @@ namespace DataUI {
 			var fieldKind = EstimateFieldKind(fi);
 			switch (fieldKind) {
 			case FieldKindEnum.Int:
-				return new GUIInt(this, fi);
+				return new GUIInt(data, fi);
 			case FieldKindEnum.Float:
-				return new GUIFloat (this, fi);
+				return new GUIFloat (data, fi);
 			case FieldKindEnum.Vector2:
-				return new GUIVector2(this, fi, 2);
+				return new GUIVector2(data, fi, 2);
 			case FieldKindEnum.Vector3:
-				return new GUIVector3(this, fi, 3);
+				return new GUIVector3(data, fi, 3);
 			case FieldKindEnum.Vector4:
-				return new GUIVector4(this, fi, 4);
+				return new GUIVector4(data, fi, 4);
             case FieldKindEnum.Matrix:
-				return new GUIMatrix (this, fi);
+				return new GUIMatrix (data, fi);
 			case FieldKindEnum.Color:
-				return new GUIColor (this, fi);
+				return new GUIColor (data, fi);
 			case FieldKindEnum.Bool:
-				return new GUIBool (this, fi);
+				return new GUIBool (data, fi);
 			case FieldKindEnum.Enum:
-				return new GUIEnum (this, fi);
-			case FieldKindEnum.String:
-				return new GUIString (this, fi);
+				return new GUIEnum (data, fi);
 			default:
-				return new GUIUnsupported (this, fi);
+				return new GUIUnsupported (data, fi);
 			}
 		}
 
@@ -86,20 +82,18 @@ namespace DataUI {
                 if (fieldType == typeof(Matrix4x4))
                     return FieldKindEnum.Matrix;
 			}
-			if (fieldType == typeof(string))
-				return FieldKindEnum.String;
 
 			return FieldKindEnum.Unknown;
 		}
 
 		public abstract class BaseGUIField {
-			public readonly FieldEditor Editor;
+			public readonly System.Object Data;
 			public readonly FieldInfo Fi;
 
 			protected System.Action _onGUI;
 
-			public BaseGUIField(FieldEditor editor, FieldInfo fi) {
-				this.Editor = editor;
+			public BaseGUIField(System.Object data, FieldInfo fi) {
+				this.Data = data;
 				this.Fi = fi;
 			}
 			public virtual void OnGUI() {
@@ -111,8 +105,8 @@ namespace DataUI {
 		public class GUIInt : BaseGUIField {
 			public readonly TextInt TextInt;
 
-			public GUIInt(FieldEditor editor, FieldInfo fi) : base(editor, fi) {
-				TextInt = new TextInt((int)fi.GetValue(Editor._data));
+			public GUIInt(System.Object data, FieldInfo fi) : base(data, fi) {
+                TextInt = new TextInt((int)fi.GetValue(data));
                 _onGUI = () => {
                     GUILayout.BeginHorizontal();
                     GUILayout.Label(string.Format("{0} ", fi.Name), GUILayout.ExpandWidth(false));
@@ -123,17 +117,17 @@ namespace DataUI {
             }
 
 			public override void Load() {
-				TextInt.Value = (int)Fi.GetValue (Editor._data);
+				TextInt.Value = (int)Fi.GetValue (Data);
             }
 			public override void Save () {
-				Fi.SetValue (Editor._data, TextInt.Value);
+				Fi.SetValue (Data, TextInt.Value);
 			}
         }
 		public class GUIFloat : BaseGUIField {
 			public readonly TextFloat TextFloat;
 
-			public GUIFloat(FieldEditor editor, FieldInfo fi) : base(editor, fi) {
-				TextFloat = new TextFloat((float)fi.GetValue(Editor._data));
+			public GUIFloat(System.Object data, FieldInfo fi) : base(data, fi) {
+				TextFloat = new TextFloat((float)fi.GetValue(data));
 				_onGUI = () => {
 					GUILayout.BeginHorizontal();
 					GUILayout.Label(string.Format("{0} ", fi.Name), GUILayout.ExpandWidth(false));
@@ -143,17 +137,17 @@ namespace DataUI {
 				};		
 			}
 			public override void Load() {
-				TextFloat.Value = (float)Fi.GetValue(Editor._data);
+				TextFloat.Value = (float)Fi.GetValue(Data);
 			}
 			public override void Save () {
-				Fi.SetValue(Editor._data, TextFloat.Value);
+				Fi.SetValue(Data, TextFloat.Value);
 			}
 		}
 		public abstract class BaseGUIVector : BaseGUIField {
 			public readonly TextVector TextVector;
 
-			public BaseGUIVector(FieldEditor editor, FieldInfo fi, int dimention) : base(editor, fi) {
-				TextVector = GetTextVector();
+			public BaseGUIVector(System.Object data, FieldInfo fi, int dimention) : base(data, fi) {
+				TextVector = GetTextVector(data, fi);
 				_onGUI = () => {
 					GUILayout.BeginHorizontal();
 					GUILayout.Label(string.Format("{0} ", fi.Name), GUILayout.ExpandWidth(false));
@@ -163,55 +157,55 @@ namespace DataUI {
 					Save();
 				};
 			}
-			public abstract TextVector GetTextVector ();
+			public abstract TextVector GetTextVector (System.Object data, FieldInfo fi);
 		}
 		public class GUIVector2 : BaseGUIVector {
-			public GUIVector2(FieldEditor editor, FieldInfo fi, int dimention) : base(editor, fi, dimention){}
+			public GUIVector2(System.Object data, FieldInfo fi, int dimention) : base(data, fi, dimention){}
 			#region implemented abstract members of BaseGUIVector
-			public override TextVector GetTextVector () {
-				return new TextVector ((Vector2)Fi.GetValue (Editor._data));
+			public override TextVector GetTextVector (object data, FieldInfo fi) {
+				return new TextVector ((Vector2)fi.GetValue (data));
 			}
 			public override void Load() {
-				TextVector.Value = (Vector2)Fi.GetValue (Editor._data);
+				TextVector.Value = (Vector2)Fi.GetValue (Data);
 			}
 			public override void Save () {
-				Fi.SetValue(Editor._data, (Vector2)TextVector.Value);
+				Fi.SetValue(Data, (Vector2)TextVector.Value);
 			}
 			#endregion
 		}
 		public class GUIVector3 : BaseGUIVector {
-			public GUIVector3(FieldEditor editor, FieldInfo fi, int dimention) : base(editor, fi, dimention){}
+			public GUIVector3(System.Object data, FieldInfo fi, int dimention) : base(data, fi, dimention){}
 			#region implemented abstract members of BaseGUIVector
-			public override TextVector GetTextVector () {
-				return new TextVector ((Vector3)Fi.GetValue (Editor._data));
+			public override TextVector GetTextVector (object data, FieldInfo fi) {
+				return new TextVector ((Vector3)fi.GetValue (data));
 			}
 			public override void Load() {
-				TextVector.Value = (Vector3)Fi.GetValue (Editor._data);
+				TextVector.Value = (Vector3)Fi.GetValue (Data);
 			}
 			public override void Save () {
-				Fi.SetValue(Editor._data, (Vector3)TextVector.Value);
+				Fi.SetValue(Data, (Vector3)TextVector.Value);
 			}
 			#endregion
 		}
 		public class GUIVector4 : BaseGUIVector {
-			public GUIVector4(FieldEditor editor, FieldInfo fi, int dimention) : base(editor, fi, dimention){}
+			public GUIVector4(System.Object data, FieldInfo fi, int dimention) : base(data, fi, dimention){}
 			#region implemented abstract members of BaseGUIVector
-			public override TextVector GetTextVector () {
-				return new TextVector ((Vector4)Fi.GetValue (Editor._data));
+			public override TextVector GetTextVector (object data, FieldInfo fi) {
+				return new TextVector ((Vector4)fi.GetValue (data));
 			}
 			public override void Load() {
-				TextVector.Value = (Vector4)Fi.GetValue (Editor._data);
+				TextVector.Value = (Vector4)Fi.GetValue (Data);
 			}
 			public override void Save () {
-				Fi.SetValue(Editor._data, TextVector.Value);
+				Fi.SetValue(Data, TextVector.Value);
 			}
 			#endregion
 		}
 		public class GUIColor : BaseGUIField {
 			public readonly TextVector TextVector;
 
-			public GUIColor(FieldEditor editor, FieldInfo fi) : base(editor, fi) {
-				TextVector = new TextVector((Color)fi.GetValue(Editor._data));
+			public GUIColor(System.Object data, FieldInfo fi) : base(data, fi) {
+				TextVector = new TextVector((Color)fi.GetValue(data));
 				_onGUI = () => {
 					var c = (Color)TextVector.Value;
 					GUILayout.BeginVertical();
@@ -233,17 +227,17 @@ namespace DataUI {
 				};				
 			}
 			public override void Load () {
-				TextVector.Value = (Color)Fi.GetValue (Editor._data);
+				TextVector.Value = (Color)Fi.GetValue (Data);
 			}
 			public override void Save () {
-				Fi.SetValue (Editor._data, (Color)TextVector.Value);
+				Fi.SetValue (Data, (Color)TextVector.Value);
 			}
 		}
 		public class GUIMatrix : BaseGUIField {
 			public readonly TextMatrix TextMatrix;
 
-			public GUIMatrix(FieldEditor editor, FieldInfo fi) : base(editor, fi) {
-				TextMatrix = new TextMatrix((Matrix4x4)fi.GetValue(Editor._data));
+			public GUIMatrix(System.Object data, FieldInfo fi) : base(data, fi) {
+				TextMatrix = new TextMatrix((Matrix4x4)fi.GetValue(data));
 				_onGUI = () => {
 					GUILayout.BeginHorizontal();
 					GUILayout.Label(string.Format("{0} ", fi.Name), GUILayout.ExpandWidth(false));
@@ -262,17 +256,17 @@ namespace DataUI {
 				};		
 			}
 			public override void Load () {
-				TextMatrix.Value = (Matrix4x4)Fi.GetValue (Editor._data);
+				TextMatrix.Value = (Matrix4x4)Fi.GetValue (Data);
 			}
 			public override void Save() {
-				Fi.SetValue (Editor._data, (Matrix4x4)TextMatrix.Value);
+				Fi.SetValue (Data, (Matrix4x4)TextMatrix.Value);
 			}
 		}
 		public class GUIBool : BaseGUIField {
 			bool _toggle;
 
-			public GUIBool(FieldEditor editor, FieldInfo fi) : base(editor, fi) {
-				_toggle = (bool)fi.GetValue(Editor._data);
+			public GUIBool(System.Object data, FieldInfo fi) : base(data, fi) {
+				_toggle = (bool)fi.GetValue(data);
 				_onGUI = () => {
 					GUILayout.BeginHorizontal();
 					_toggle = GUILayout.Toggle(_toggle, string.Format("{0} ", fi.Name));
@@ -281,21 +275,21 @@ namespace DataUI {
 				};
 			}
 			public override void Load () {
-				_toggle = (bool)Fi.GetValue (Editor._data);
+				_toggle = (bool)Fi.GetValue (Data);
 			}
 			public override void Save() {
-				Fi.SetValue (Editor._data, _toggle);
+				Fi.SetValue (Data, _toggle);
 			}
 		}
 		public class GUIEnum : BaseGUIField {
 			public readonly TextInt TextInt;
 
-			public GUIEnum(FieldEditor editor, FieldInfo fi) : base(editor, fi) {
+			public GUIEnum(System.Object data, FieldInfo fi) : base(data, fi) {
 				var enumType = fi.FieldType;
 				var list = new StringBuilder();
 				foreach (var selection in System.Enum.GetValues(enumType))
 					list.AppendFormat("{0}({1}) ", selection, (int)selection);
-				TextInt = new TextInt((int)fi.GetValue(Editor._data));
+				TextInt = new TextInt((int)fi.GetValue(data));
 				_onGUI = () => {
 					GUILayout.BeginHorizontal();
 					GUILayout.Label(string.Format("{0} ", fi.Name), GUILayout.ExpandWidth(false));
@@ -307,40 +301,20 @@ namespace DataUI {
 				};
 			}
 			public override void Load() {
-				TextInt.Value = (int)Fi.GetValue (Editor._data);
+				TextInt.Value = (int)Fi.GetValue (Data);
 			}
 			public override void Save () {
-				Fi.SetValue (Editor._data, GetEnumValue());
+				Fi.SetValue (Data, GetEnumValue());
 			}
 			public System.Object GetEnumValue() {
 				return System.Enum.ToObject (Fi.FieldType, TextInt.Value);
 			}
 		}
-		public class GUIString : BaseGUIField {
-			string _value;
-
-			public GUIString(FieldEditor editor, FieldInfo fi) : base(editor, fi) {
-				_value = (string)fi.GetValue(Editor._data);
-				_onGUI = () => {
-					GUILayout.BeginHorizontal();
-					GUILayout.Label(string.Format("{0} ", fi.Name), GUILayout.ExpandWidth(false));
-					_value = GUILayout.TextField(_value, GUILayout.ExpandWidth(true), GUILayout.MinWidth(60f));
-					GUILayout.EndHorizontal();
-					Save();
-				};
-			}
-			public override void Load () {
-				_value = (string)Fi.GetValue (Editor._data);
-			}
-			public override void Save() {
-				Fi.SetValue (Editor._data, _value);
-			}
-		}
 		public class GUIUnsupported : BaseGUIField {
-			public GUIUnsupported(FieldEditor editor, FieldInfo fi) : base(editor, fi) {
+			public GUIUnsupported(System.Object data, FieldInfo fi) : base(data, fi) {
 				_onGUI = () => {
 					GUILayout.BeginHorizontal();
-					GUILayout.Label(string.Format("Unsupported Field : {1} {0};", fi.Name, fi.FieldType.Name));
+					GUILayout.Label(string.Format("Unsupported Field : {0} of {1}", fi.Name, fi.FieldType.Name));
 					GUILayout.EndHorizontal();
 				};		
 			}

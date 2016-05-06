@@ -13,15 +13,13 @@ namespace DataUI {
 			_dataEditor = new FieldEditor(data);
 		}
 		void OnGUI() {
-			_window = GUILayout.Window(0, _window, GUIWindow, "GUI");
+            _window = GUILayout.Window(GetInstanceID(), _window, GUIWindow, "GUI");
 		}
 		void GUIWindow(int id) {
 			GUILayout.BeginVertical();
 			_dataEditor.OnGUI();
-			if (GUILayout.Button ("Load")) {
-				data.intData = 99999;
-				_dataEditor.Load (data);
-			}
+			if (GUILayout.Button ("Load"))
+				_dataEditor.Load ();
 			GUILayout.EndVertical();
             GUI.DragWindow ();
 		}
@@ -30,7 +28,6 @@ namespace DataUI {
     	public class Data {
     		public enum TeamEnum { Alpha, Bravo, Charlie }
 
-			public string stringData;
     		public int intData;
     		public float floatData;
     		public Vector4 v4Data;
