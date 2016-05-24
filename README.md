@@ -1,25 +1,25 @@
-unity-osc
-=========
-OSC Client & Server MonoBehaviours for Unity
+#OSC Controller
 
-[Unity Package](Osc.unitypackage)
+なかたさんの、[unity-osc](https://github.com/nobnak/unity-osc)を、自分で使うようにOscControllerクラスを作った。
 
-# Usage
-## Set Up a Server
- - Add OscServer (MonoBehaviour) Component
- - Set Listening Port Number
- - Listen OnReceive Event
+OSCのpath毎に、UnityEventを設定できるようにした。
 
-## Set Up a Client
- - Add OscClient (MonoBehaviour) Component
- - Set Server Name & Port Number
- - Listen OnReceive Event
+##Usage
 
-## Send a Message
-```C#
-var oscEnc = new MessageEncoder("/path");
-oscEnc.Add(3.14f);
-oscEnc.Add(12345);
-var dest = new IPEndPoint("Client IP Address", "Client Port Number");
-_server.Send(oscEnc.Encode(), dest);
+- OscControllerコンポーネントをセット
+- localPortで、受けのポートをセット
+- defaultRemoteHostは、Sendするホスト名(IP)
+- defaultRemotPostは、Sendするポート名(Sendする場合は設定)
+- Sendするときに、IP/Portを指定して送ることも可能。(OscController.oscEvents)
+
+###Send OscMessage
+
+OscSender.cs is example code.
+
+```csharp
+var osc = new MessageEncoder(path);
+osc.Add(val);
+osc.Add(val);
+OscController.Instance.Send(osc);
+//OscController.Instance.Send(osc, remote, port);
 ```
