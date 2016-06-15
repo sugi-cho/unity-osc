@@ -13,7 +13,7 @@ OSCのpath毎に、UnityEventを設定できるようにした。
 - Sendするときに、IP/Portを指定して送ることも可能。
 - OSCを受け取ったときのイベントリスト(OscController.oscEvents)
  - oscのpathと対するイベントのペアをリストで設定する。
- -例)  onEvents[[0].path = "/point", onEvents[0].onOsc = "OnPoint(object[])"
+ - 例) onEvents[[0].path = "/point", onEvents[0].onOsc = "OnPoint(object[])"
 
 ###Send OscMessage
 
